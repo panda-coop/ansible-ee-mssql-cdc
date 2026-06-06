@@ -1,0 +1,10 @@
+# System packages baked into the execution environment.
+# Format: https://docs.openstack.org/infra/bindep/
+#
+# These are the build/runtime deps pyodbc needs to compile and link against
+# unixODBC. msodbcsql18 itself comes from the Microsoft repo (see the
+# prepend_base step in execution-environment.yml), not from here, because it
+# lives outside the distro's default repos.
+unixODBC-devel [platform:rpm]
+gcc [platform:rpm compile]
+python3.11-devel [platform:rpm compile]

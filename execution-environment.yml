@@ -1,0 +1,48 @@
+---
+# Execution Environment for mssql-cdc-infra.
+#
+# Bakes everything a CDC run needs into one OCI image:
+#   * the mykola_kharchenko.mssql_cdc collection (from ../requirements.yml)
+#   * pyodbc          (Python driver the modules import)
+#   * Microsoft ODBC Driver 18 + unixODBC (native layer pyodbc binds to)
+#
+# Build it (run from this directory):
+#   ansible-builder build \
+#     --tag localhost/mssql-cdc-ee:latest \
+#     --container-runtime podman --verbosity 2
+#
+# ansible-navigator.yml points `execution-environment.image` at the tag above.
+version: 3
+
+images:
+  base_image:
+    # CentOS Stream 9: publicly pullable and RHEL 9-compatible, so the Microsoft
+    # RHEL 9 ODBC repo installs cleanly. It ships no ansible, so the builder
+    # lays down Python 3.11 + ansible-core + ansible-runner below.
+    # (quay.io/ansible/community-ee-base now requires auth, hence this base.)
+    name: quay.io/centos/centos:stream9
+
+dependencies:
+  # Stream 9's default python is 3.9; ansible-core >=2.16 needs >=3.10, so pin
+  # the interpreter to 3.11 and install ansible into it.
+  python_interpreter:
+    package_system: python3.11
+    python_path: /usr/bin/python3.11
+  ansible_core:
+    package_pip: ansible-core>=2.16
+  ansible_runner:
+    package_pip: ansible-runner
+  galaxy: ../requirements.yml      # installs the collection INTO the image
+  python: requirements.txt         # pyodbc
+  system: bindep.txt               # unixODBC-devel, gcc, python3.11-devel (pyodbc build deps)
+
+additional_build_steps:
+  # Each entry is a raw Dockerfile instruction (ansible-builder v3).
+  prepend_base:
+    # Add the Microsoft package repo and install ODBC Driver 18. EULA is
+    # accepted non-interactively. This is the native driver pyodbc loads at
+    # runtime; without it `import pyodbc` works but connecting fails.
+    - RUN curl -fsSL https://packages.microsoft.com/config/rhel/9/prod.repo -o /etc/yum.repos.d/mssql-release.repo
+    - RUN ACCEPT_EULA=Y dnf install -y --setopt=install_weak_deps=0 msodbcsql18 && dnf clean all
+  append_final:
+    - RUN echo "mssql-cdc-ee — collection + pyodbc + msodbcsql18" > /etc/ee-release

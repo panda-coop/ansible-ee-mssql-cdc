@@ -1,0 +1,5 @@
+# Python deps baked into the execution environment.
+# Mirrors the collection's own requirements.txt (pyodbc needs ODBC Driver 18 +
+# unixODBC at the OS level — installed via bindep.txt + the Microsoft repo step
+# in execution-environment.yml).
+pyodbc>=5
