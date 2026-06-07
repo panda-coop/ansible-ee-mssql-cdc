@@ -1,8 +1,8 @@
 ---
-# Execution Environment for mssql-cdc-infra.
+# Execution Environment for MSSQL CDC management.
 #
 # Bakes everything a CDC run needs into one OCI image:
-#   * the mykola_kharchenko.mssql_cdc collection (from ../requirements.yml)
+#   * the mykola_kharchenko.mssql_cdc collection (from requirements.yml)
 #   * pyodbc          (Python driver the modules import)
 #   * Microsoft ODBC Driver 18 + unixODBC (native layer pyodbc binds to)
 #
@@ -32,7 +32,7 @@ dependencies:
     package_pip: ansible-core>=2.16
   ansible_runner:
     package_pip: ansible-runner
-  galaxy: ../requirements.yml      # installs the collection INTO the image
+  galaxy: requirements.yml         # installs the collection INTO the image
   python: requirements.txt         # pyodbc
   system: bindep.txt               # unixODBC-devel, gcc, python3.11-devel (pyodbc build deps)
 

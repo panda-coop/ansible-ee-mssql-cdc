@@ -1,0 +1,70 @@
+---
+# Build the MSSQL CDC execution environment with ansible-builder and push it to
+# GHCR. This repo holds only the EE definition, so every push to main is an EE
+# change — build on push to main, on version tags (v*), and on manual dispatch.
+#
+#   :latest        — moved on every main push
+#   :<version>     — set when you push a git tag `vX.Y.Z` (tracks the collection)
+#
+# Consumers (e.g. fabric/ansible/ansible-navigator.yml) reference
+#   ghcr.io/panda-coop/ansible-ee-mssql-cdc:<tag>
+name: build-ee
+
+"on":
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to publish (default: latest)"
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ansible-builder
+        run: pip install ansible-builder
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.inputs.tag || 'latest' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build EE image
+        run: |
+          ansible-builder build \
+            --tag "$IMAGE:${{ steps.tag.outputs.value }}" \
+            --tag "$IMAGE:latest" \
+            --container-runtime docker --verbosity 2
+
+      - name: Push EE image
+        run: |
+          docker push "$IMAGE:${{ steps.tag.outputs.value }}"
+          docker push "$IMAGE:latest"

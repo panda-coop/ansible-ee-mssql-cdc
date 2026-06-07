@@ -1,0 +1,11 @@
+---
+# Galaxy content baked into this execution environment by ansible-builder
+# (the EE installs the collection so it ships *inside* the image).
+collections:
+  # 0.3.0+ adds captured_columns (merge-based per-column), per-entry state,
+  # allow_partition_switch, and source-table preflight validation.
+  # 0.3.2 carries the non-ASCII --diff rendering fix.
+  # 0.4.0 adds the cdc_table `action` field, a per-run role summary (set_stats),
+  # and role argument_specs validation.
+  - name: mykola_kharchenko.mssql_cdc
+    version: ">=0.4.0"
